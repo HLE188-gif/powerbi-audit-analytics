@@ -3,3 +3,23 @@
 -- Calculates total net sales.
 
 Total Net Sales = SUM(SalesTable[Net_Sales])
+
+
+-- PURCHASING: POTENTIAL DUPLICATE SUPPLIER INVOICES
+-- Counts supplier-and-invoice combinations appearing more than once.
+
+Potential Duplicate Supplier Invoices =
+COALESCE(
+    COUNTROWS(
+        FILTER(
+            SUMMARIZE(
+                PaymentsTable,
+                PaymentsTable[Supplier_ID],
+                PaymentsTable[Invoice_Number],
+                "PaymentCount", COUNTROWS(PaymentsTable)
+            ),
+            [PaymentCount] > 1
+        )
+    ),
+    0
+)
