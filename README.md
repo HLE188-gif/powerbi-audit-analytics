@@ -68,6 +68,20 @@ These findings represent potential risks requiring further audit investigation, 
 
 The repository includes the Power BI report and screenshots of its three dashboard pages.
 
+
+## Audit Report
+
+📄 [View Full Audit Analytics Report](Audit_Analytics_Report.pdf)
+
+The report includes:
+- Power BI data modelling and relationships
+- 11 identified audit risks
+- False-positive investigation
+- Five detailed audit risk assessments
+- Audit procedures and recommendations
+- Audit partner memorandum
+
+
 ## Important Note
 
 This project was developed for academic audit analytics. Findings are based on analytical testing and require supporting audit evidence before final conclusions can be reached.
