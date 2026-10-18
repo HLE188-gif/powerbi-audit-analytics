@@ -1,0 +1,5 @@
+
+-- REVENUE ANALYSIS
+-- Calculates total net sales.
+
+Total Net Sales = SUM(SalesTable[Net_Sales])
