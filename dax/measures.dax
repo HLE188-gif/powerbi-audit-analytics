@@ -1,13 +1,37 @@
+-- POWER BI RETAIL AUDIT ANALYTICS
+-- Portfolio reference: DAX measure definitions extracted from the Power BI report.
+-- Each measure is defined separately in the Power BI semantic model.
 
--- REVENUE ANALYSIS
--- Calculates total net sales.
+-- =============================================================
+-- REVENUE
+-- =============================================================
 
-Total Net Sales = SUM(SalesTable[Net_Sales])
+-- Total net sales across the current filter context.
+Total Net Sales =
+SUM(SalesTable[Net_Sales])
 
+-- July 2026 credit notes on sales invoiced during FY2026.
+July Credits on FY2026 Sales =
+COALESCE(
+    CALCULATE(
+        SUM(CreditNotesTable[Credit_Amount]),
+        FILTER(
+            CreditNotesTable,
+            CreditNotesTable[Credit_Note_Date] >= DATE(2026, 7, 1)
+                && CreditNotesTable[Credit_Note_Date] < DATE(2026, 8, 1)
+                && CreditNotesTable[Original Invoice Date] >= DATE(2025, 7, 1)
+                && CreditNotesTable[Original Invoice Date] < DATE(2026, 7, 1)
+        )
+    ),
+    0
+)
 
--- PURCHASING: POTENTIAL DUPLICATE SUPPLIER INVOICES
--- Counts supplier-and-invoice combinations appearing more than once.
+-- =============================================================
+-- PURCHASING & ACCOUNTS PAYABLE
+-- =============================================================
 
+-- Count supplier-and-invoice combinations with more than one payment.
+-- These are investigation flags, not proof of duplicate payments.
 Potential Duplicate Supplier Invoices =
 COALESCE(
     COUNTROWS(
@@ -24,13 +48,96 @@ COALESCE(
     0
 )
 
+-- Count payments to suppliers whose current Approved_Status is not 'Yes'.
+Payments to Unapproved Suppliers =
+COALESCE(
+    COUNTROWS(
+        FILTER(
+            PaymentsTable,
+            RELATED(SuppliersTable[Approved_Status]) <> "Yes"
+        )
+    ),
+    0
+)
 
-
+-- =============================================================
 -- INVENTORY VALUATION
--- Calculates total inventory value using quantity on hand multiplied by unit cost.
+-- =============================================================
 
+-- Value of all inventory at quantity on hand multiplied by unit cost.
 Total Inventory Value =
 SUMX(
     InventoryTable,
     InventoryTable[Quantity_On_Hand] * InventoryTable[Unit_Cost]
+)
+
+-- Recorded cost of damaged inventory quantities.
+Damaged Inventory Value =
+SUMX(
+    InventoryTable,
+    InventoryTable[Damaged_Quantity] * InventoryTable[Unit_Cost]
+)
+
+-- Recorded cost of inventory flagged obsolete.
+Obsolete Inventory Value =
+COALESCE(
+    SUMX(
+        FILTER(
+            InventoryTable,
+            InventoryTable[Obsolete_Flag] = "Yes"
+        ),
+        InventoryTable[Quantity_On_Hand] * InventoryTable[Unit_Cost]
+    ),
+    0
+)
+
+-- =============================================================
+-- GENERAL LEDGER / SEGREGATION OF DUTIES
+-- =============================================================
+
+-- Count distinct journals with the same posting and approving user.
+Journal SoD Conflicts =
+COALESCE(
+    CALCULATE(
+        DISTINCTCOUNT(GLTable[Journal_ID]),
+        FILTER(
+            GLTable,
+            NOT ISBLANK(GLTable[User_ID])
+                && NOT ISBLANK(GLTable[Approver_ID])
+                && GLTable[User_ID] = GLTable[Approver_ID]
+        )
+    ),
+    0
+)
+
+-- =============================================================
+-- USER ACCESS
+-- =============================================================
+
+-- Count users with both payment processing and approval permissions.
+Users With Conflicting Payment Rights =
+COALESCE(
+    CALCULATE(
+        DISTINCTCOUNT(AccessTable[User_ID]),
+        AccessTable[Process_Payment] = "Yes",
+        AccessTable[Approve_Payment] = "Yes"
+    ),
+    0
+)
+
+-- Count access records with login dates after employee termination dates.
+Logins After Termination =
+COALESCE(
+    COUNTROWS(
+        FILTER(
+            AccessTable,
+            VAR TerminationDate =
+                RELATED(EmployeesTable[Termination_Date])
+            RETURN
+                NOT ISBLANK(TerminationDate)
+                    && NOT ISBLANK(AccessTable[Last_Login])
+                    && INT(AccessTable[Last_Login]) > INT(TerminationDate)
+        )
+    ),
+    0
 )
