@@ -23,3 +23,14 @@ COALESCE(
     ),
     0
 )
+
+
+
+-- INVENTORY VALUATION
+-- Calculates total inventory value using quantity on hand multiplied by unit cost.
+
+Total Inventory Value =
+SUMX(
+    InventoryTable,
+    InventoryTable[Quantity_On_Hand] * InventoryTable[Unit_Cost]
+)
